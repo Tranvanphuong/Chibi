@@ -1,3 +1,5 @@
+import { loadLayout } from './js/utils.js';
+
 // Initialize PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
 
@@ -8,12 +10,44 @@ const users = [
 ];
 
 // PDF viewer state
-let currentPdf = null;
-let currentPage = 1;
-let totalPages = 0;
+let pdfDoc = null;
+let pageNum = 1;
+let pageRendering = false;
+let pageNumPending = null;
+let currentPdfIndex = 0;
+
+// Định nghĩa danh sách PDF cho từng lớp
+const classPdfList = {
+    1: [
+        { name: 'Bài 1 - Hiragana', file: 'class1.pdf' },
+        { name: 'Bài 2 - Katakana', file: 'katakana.pdf' },
+        { name: 'Bài 3 - Chào hỏi', file: 'greetings.pdf' }
+    ],
+    2: [
+        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'basic_grammar.pdf' },
+        { name: 'Bài 2 - Từ vựng', file: 'vocabulary.pdf' }
+    ],
+    3: [
+        { name: 'Bài 1 - Kanji cơ bản', file: 'basic_kanji.pdf' },
+        { name: 'Bài 2 - Hội thoại', file: 'conversation.pdf' }
+    ],
+    4: [
+        { name: 'Bài 1 - Ngữ pháp nâng cao', file: 'advanced_grammar.pdf' },
+        { name: 'Bài 2 - Đọc hiểu', file: 'reading.pdf' }
+    ],
+    5: [
+        { name: 'Bài 1 - Kanji nâng cao', file: 'advanced_kanji.pdf' },
+        { name: 'Bài 2 - Viết văn', file: 'writing.pdf' }
+    ],
+    6: [
+        { name: 'Bài 1 - Tiếng Nhật thương mại', file: 'business.pdf' },
+        { name: 'Bài 2 - Thuyết trình', file: 'presentation.pdf' }
+    ]
+};
 
 // Authentication
-function login() {
+function handleLogin(event) {
+    event.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
 
@@ -21,8 +55,7 @@ function login() {
 
     if (user) {
         localStorage.setItem('isLoggedIn', 'true');
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
+        window.location.href = 'index.html';
     } else {
         alert('Tên đăng nhập hoặc mật khẩu không đúng!');
     }
@@ -30,86 +63,231 @@ function login() {
 
 function logout() {
     localStorage.removeItem('isLoggedIn');
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('mainContent').style.display = 'none';
-    document.getElementById('username').value = '';
-    document.getElementById('password').value = '';
+    window.location.href = 'login.html';
 }
 
 // Check login status on page load
-window.onload = function() {
-    if (localStorage.getItem('isLoggedIn') === 'true') {
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('mainContent').style.display = 'block';
+window.onload = async function() {
+    // Load layout
+    await loadLayout();
+
+    // Check login status
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const loginBtn = document.querySelector('.login-btn');
+    
+    if (isLoggedIn) {
+        if (loginBtn) {
+            loginBtn.textContent = 'Đăng xuất';
+            loginBtn.href = '#';
+            loginBtn.onclick = logout;
+        }
+    }
+
+    // Initialize PDF viewer if on class page
+    if (window.location.pathname.includes('class.html')) {
+        initializePdfViewer();
     }
 };
 
-// Class selection and PDF loading
-async function selectClass(className) {
-    const pdfPath = `images/${className}/${className}.pdf`;
-    try {
-        const loadingTask = pdfjsLib.getDocument(pdfPath);
-        currentPdf = await loadingTask.promise;
-        totalPages = currentPdf.numPages;
-        currentPage = 1;
-        
-        document.getElementById('pageCount').textContent = totalPages;
-        renderPage(currentPage);
-    } catch (error) {
-        console.error('Error loading PDF:', error);
-        alert('Không thể tải tài liệu. Vui lòng thử lại sau.');
+// PDF viewer functions
+function initializePdfViewer() {
+    const canvas = document.getElementById('pdfViewer');
+    const ctx = canvas.getContext('2d');
+
+    // Lấy level từ URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const level = parseInt(urlParams.get('level')) || 1;
+    const pdfFiles = classPdfList[level] || [];
+
+    document.getElementById('classLevel').textContent = level;
+    document.getElementById('classDescription').textContent = `Nội dung bài học dành cho lớp ${level}`;
+
+    // Load PDF file
+    const loadPDF = async (pdfInfo) => {
+        try {
+            const loadingTask = pdfjsLib.getDocument(`images/class${level}/${pdfInfo.file}`);
+            pdfDoc = await loadingTask.promise;
+            document.getElementById('pageCount').textContent = pdfDoc.numPages;
+            pageNum = 1;
+            renderPage(pageNum);
+            updatePdfNavigation();
+        } catch (error) {
+            console.error('Error loading PDF:', error);
+            alert('Không thể tải tài liệu PDF. Vui lòng thử lại sau.');
+        }
+    };
+
+    // Render PDF page
+    const renderPage = (num) => {
+        pageRendering = true;
+        pdfDoc.getPage(num).then((page) => {
+            let desiredWidth = 297;
+            let desiredHeight = 425;
+            
+            // Kiểm tra nếu đang ở chế độ fullscreen
+            if (document.fullscreenElement) {
+                // Lấy kích thước màn hình
+                const screenHeight = window.innerHeight;
+                const screenWidth = window.innerWidth;
+                
+                // Tính toán scale để fit với chiều cao màn hình và giữ tỷ lệ
+                const viewport = page.getViewport({ scale: 1.0 });
+                const originalRatio = viewport.width / viewport.height;
+                
+                // Ưu tiên chiều cao tối đa
+                desiredHeight = screenHeight;
+                desiredWidth = screenHeight * originalRatio;
+                
+                // Nếu chiều rộng vượt quá màn hình, điều chỉnh lại
+                if (desiredWidth > screenWidth) {
+                    desiredWidth = screenWidth;
+                    desiredHeight = screenWidth / originalRatio;
+                }
+            }
+            
+            const viewport = page.getViewport({ scale: 1.0 });
+            const scaleX = desiredWidth / viewport.width;
+            const scaleY = desiredHeight / viewport.height;
+            const scale = Math.min(scaleX, scaleY);
+            
+            const scaledViewport = page.getViewport({ scale: scale });
+
+            canvas.height = desiredHeight;
+            canvas.width = desiredWidth;
+
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: scaledViewport
+            };
+
+            const renderTask = page.render(renderContext);
+            renderTask.promise.then(() => {
+                pageRendering = false;
+                if (pageNumPending !== null) {
+                    renderPage(pageNumPending);
+                    pageNumPending = null;
+                }
+            });
+        });
+
+        document.getElementById('pageNum').textContent = num;
+    };
+
+    // Previous page
+    window.prevPage = () => {
+        if (pageNum <= 1) {
+            // Nếu đang ở trang đầu của PDF hiện tại, chuyển sang PDF trước đó
+            if (currentPdfIndex > 0) {
+                currentPdfIndex--;
+                loadPDF(pdfFiles[currentPdfIndex]);
+            }
+            return;
+        }
+        pageNum--;
+        queueRenderPage(pageNum);
+    };
+
+    // Next page
+    window.nextPage = () => {
+        if (pageNum >= pdfDoc.numPages) {
+            // Nếu đang ở trang cuối của PDF hiện tại, chuyển sang PDF tiếp theo
+            if (currentPdfIndex < pdfFiles.length - 1) {
+                currentPdfIndex++;
+                loadPDF(pdfFiles[currentPdfIndex]);
+            }
+            return;
+        }
+        pageNum++;
+        queueRenderPage(pageNum);
+    };
+
+    // Queue rendering of the page
+    const queueRenderPage = (num) => {
+        if (pageRendering) {
+            pageNumPending = num;
+        } else {
+            renderPage(num);
+        }
+    };
+
+    // Toggle fullscreen
+    window.toggleFullscreen = () => {
+        const pdfContainer = document.querySelector('.pdf-container');
+        const pdfheader = document.querySelector('.pdf-header');
+        const fullscreenBtn = document.querySelector('.fullscreen-button');
+
+        if (!document.fullscreenElement) {
+            pdfContainer.requestFullscreen().then(() => {
+                pdfContainer.classList.add('fullscreen');
+                canvas.classList.add('fullscreen-mode');
+                pdfheader.classList.add('d-none');
+                fullscreenBtn.classList.add('active');
+                // Re-render trang hiện tại với kích thước mới
+                renderPage(pageNum);
+            }).catch(err => {
+                alert(`Lỗi khi chuyển sang chế độ toàn màn hình: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen().then(() => {
+                pdfContainer.classList.remove('fullscreen');
+                canvas.classList.remove('fullscreen-mode');
+                pdfheader.classList.remove('d-none');
+                fullscreenBtn.classList.remove('active');
+                // Re-render trang hiện tại với kích thước mặc định
+                renderPage(pageNum);
+            });
+        }
+    };
+
+    // Thêm event listener cho sự kiện thay đổi kích thước màn hình
+    window.addEventListener('resize', () => {
+        if (document.fullscreenElement) {
+            renderPage(pageNum);
+        }
+    });
+
+    // Cập nhật thông tin điều hướng PDF
+    const updatePdfNavigation = () => {
+        const pdfTitle = document.getElementById('pdfTitle');
+        const prevBtn = document.getElementById('prevPdfBtn');
+        const nextBtn = document.getElementById('nextPdfBtn');
+
+        if (pdfTitle && pdfFiles[currentPdfIndex]) {
+            pdfTitle.textContent = `Tài liệu ${currentPdfIndex + 1}/${pdfFiles.length}: ${pdfFiles[currentPdfIndex].name}`;
+        }
+
+        // Cập nhật trạng thái các nút điều hướng
+        if (prevBtn) {
+            prevBtn.disabled = currentPdfIndex <= 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = currentPdfIndex >= pdfFiles.length - 1;
+        }
+    };
+
+    // Chuyển đến tài liệu PDF trước
+    window.prevPdf = () => {
+        if (currentPdfIndex > 0) {
+            currentPdfIndex--;
+            loadPDF(pdfFiles[currentPdfIndex]);
+        }
+    };
+
+    // Chuyển đến tài liệu PDF tiếp theo
+    window.nextPdf = () => {
+        if (currentPdfIndex < pdfFiles.length - 1) {
+            currentPdfIndex++;
+            loadPDF(pdfFiles[currentPdfIndex]);
+        }
+    };
+
+    // Kiểm tra và tải PDF đầu tiên nếu có
+    if (pdfFiles.length > 0) {
+        loadPDF(pdfFiles[0]);
+    } else {
+        document.getElementById('pdfTitle').textContent = 'Không có tài liệu cho lớp này';
     }
 }
-
-// PDF rendering
-async function renderPage(pageNumber) {
-    try {
-        const page = await currentPdf.getPage(pageNumber);
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        
-        const viewport = page.getViewport({ scale: 1.5 });
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        const renderContext = {
-            canvasContext: context,
-            viewport: viewport
-        };
-
-        await page.render(renderContext).promise;
-
-        const container = document.getElementById('pdfViewerContainer');
-        container.innerHTML = '';
-        container.appendChild(canvas);
-        
-        document.getElementById('pageNum').textContent = pageNumber;
-    } catch (error) {
-        console.error('Error rendering page:', error);
-        alert('Không thể hiển thị trang. Vui lòng thử lại.');
-    }
-}
-
-// Navigation
-function prevPage() {
-    if (currentPdf && currentPage > 1) {
-        currentPage--;
-        renderPage(currentPage);
-    }
-}
-
-function nextPage() {
-    if (currentPdf && currentPage < totalPages) {
-        currentPage++;
-        renderPage(currentPage);
-    }
-}
-
-// Prevent right-click on PDF viewer
-document.getElementById('pdfViewerContainer').addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    return false;
-});
 
 // Prevent keyboard shortcuts
 document.addEventListener('keydown', (e) => {
@@ -118,40 +296,6 @@ document.addEventListener('keydown', (e) => {
         return false;
     }
 });
-
-// Fullscreen functionality
-function toggleFullscreen() {
-    const container = document.getElementById('pdfViewerContainer');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const fullscreenText = fullscreenBtn.querySelector('.fullscreen-text');
-
-    if (!container.classList.contains('fullscreen')) {
-        container.classList.add('fullscreen');
-        fullscreenText.textContent = 'Thoát Toàn Màn Hình';
-        
-        // Re-render current page to adjust to new size
-        renderPage(currentPage);
-    } else {
-        container.classList.remove('fullscreen');
-        fullscreenText.textContent = 'Toàn Màn Hình';
-        
-        // Re-render current page to adjust to original size
-        renderPage(currentPage);
-    }
-}
-
-// Add ESC key handler for fullscreen
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        const container = document.getElementById('pdfViewerContainer');
-        if (container.classList.contains('fullscreen')) {
-            toggleFullscreen();
-        }
-    }
-});
-
-// Add click event for fullscreen button
-document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
 
 // Add keyboard shortcuts for navigation and fullscreen
 document.addEventListener('keydown', (e) => {
@@ -164,7 +308,7 @@ document.addEventListener('keydown', (e) => {
     const container = document.getElementById('pdfViewerContainer');
     
     // Only handle navigation keys when in fullscreen mode
-    if (container.classList.contains('fullscreen')) {
+    if (container && container.classList.contains('fullscreen')) {
         switch(e.key) {
             case 'Escape':
                 toggleFullscreen();
