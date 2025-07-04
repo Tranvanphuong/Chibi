@@ -40,4 +40,14 @@ flowchart TD
 1. Client-side authentication
 2. PDF viewing restrictions
 3. Session management
-4. Content access control 
+4. Content access control
+
+## UI Design Patterns
+### Responsive Layout Patterns
+- Sử dụng Flexbox và Grid cho layout linh hoạt
+- Container có max-width và margin auto để căn giữa nội dung
+- Responsive images với object-fit
+- Responsive typography với rem units
+- Collapsible navigation menu trên mobile
+- Stack layout trên mobile thay vì side-by-side
+- Ẩn/hiện các thành phần UI dựa trên viewport size 

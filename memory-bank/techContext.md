@@ -35,3 +35,15 @@ project/
 1. No build tools required
 2. Can be served from any static file server
 3. Modern browser compatibility required 
+
+## Responsive Design Requirements
+- Mobile-first approach là ưu tiên hàng đầu
+- Sử dụng media queries để tối ưu hiển thị trên các kích thước màn hình khác nhau
+- Breakpoints chính:
+  - Mobile: < 768px
+  - Tablet: 768px - 1024px
+  - Desktop: > 1024px
+- Đảm bảo các thành phần UI có thể scale tốt trên mobile
+- Font size và spacing phải responsive
+- Touch targets phải đủ lớn (tối thiểu 44x44px) cho mobile
+- Tránh horizontal scrolling trên mobile 

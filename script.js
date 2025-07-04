@@ -19,29 +19,22 @@ let currentPdfIndex = 0;
 // Định nghĩa danh sách PDF cho từng lớp
 const classPdfList = {
     1: [
-        { name: 'Bài 1 - Hiragana', file: 'class1.pdf' },
-        { name: 'Bài 2 - Katakana', file: 'katakana.pdf' },
-        { name: 'Bài 3 - Chào hỏi', file: 'greetings.pdf' }
+        { name: 'Bài 1 - Hiragana', file: 'class1.pdf' }
     ],
     2: [
-        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'basic_grammar.pdf' },
-        { name: 'Bài 2 - Từ vựng', file: 'vocabulary.pdf' }
+        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
     ],
     3: [
-        { name: 'Bài 1 - Kanji cơ bản', file: 'basic_kanji.pdf' },
-        { name: 'Bài 2 - Hội thoại', file: 'conversation.pdf' }
+        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
     ],
     4: [
-        { name: 'Bài 1 - Ngữ pháp nâng cao', file: 'advanced_grammar.pdf' },
-        { name: 'Bài 2 - Đọc hiểu', file: 'reading.pdf' }
+        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
     ],
     5: [
-        { name: 'Bài 1 - Kanji nâng cao', file: 'advanced_kanji.pdf' },
-        { name: 'Bài 2 - Viết văn', file: 'writing.pdf' }
+        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
     ],
     6: [
-        { name: 'Bài 1 - Tiếng Nhật thương mại', file: 'business.pdf' },
-        { name: 'Bài 2 - Thuyết trình', file: 'presentation.pdf' }
+        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
     ]
 };
 

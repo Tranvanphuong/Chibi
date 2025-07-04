@@ -1,0 +1,6 @@
+## UI/UX Preferences
+- Mobile-first approach là yêu cầu bắt buộc
+- Mọi feature phải được test và tối ưu trên mobile trước
+- Sử dụng responsive design patterns đã định nghĩa trong systemPatterns.md
+- Ưu tiên trải nghiệm người dùng trên mobile
+- Đảm bảo performance tốt trên các thiết bị di động 
