@@ -98,7 +98,7 @@ function initializePdfViewer() {
     // Load PDF file
     const loadPDF = async (pdfInfo) => {
         try {
-            const loadingTask = pdfjsLib.getDocument(`images/class${level}/${pdfInfo.file}`);
+            const loadingTask = pdfjsLib.getDocument(`public/class${level}/${pdfInfo.file}`);
             pdfDoc = await loadingTask.promise;
             document.getElementById('pageCount').textContent = pdfDoc.numPages;
             pageNum = 1;
@@ -313,5 +313,26 @@ document.addEventListener('keydown', (e) => {
                 prevPage();
                 break;
         }
+    }
+}); 
+// Mobile Menu Toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const menuToggle = document.querySelector('.menu-toggle');
+    const mobileMenu = document.querySelector('.mobile-menu');
+    const hamburger = document.querySelector('.hamburger');
+
+    if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener('click', function() {
+            mobileMenu.classList.toggle('active');
+            hamburger.classList.toggle('active');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!menuToggle.contains(event.target) && !mobileMenu.contains(event.target)) {
+                mobileMenu.classList.remove('active');
+                hamburger.classList.remove('active');
+            }
+        });
     }
 }); 
