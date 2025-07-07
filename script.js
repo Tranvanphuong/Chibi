@@ -15,6 +15,7 @@ let startX;
 let startY;
 let translateX = 0;
 let translateY = 0;
+let currentImage = null;
 
 // Authentication
 function handleLogin(event) {
@@ -68,22 +69,28 @@ function initializeImageViewer() {
     loadImage(level, currentImageIndex);
 
     // Add event listeners for drag functionality
-    const imageElement = document.getElementById('lessonImage');
-    imageElement.addEventListener('mousedown', startDrag);
+    const canvas = document.getElementById('lessonCanvas');
+    canvas.addEventListener('mousedown', startDrag);
     document.addEventListener('mousemove', drag);
     document.addEventListener('mouseup', endDrag);
     
     // Touch events for mobile
-    imageElement.addEventListener('touchstart', startDrag);
+    canvas.addEventListener('touchstart', startDrag);
     document.addEventListener('touchmove', drag);
     document.addEventListener('touchend', endDrag);
 
     // Add keyboard shortcuts
     document.addEventListener('keydown', handleKeyPress);
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (currentImage) {
+            drawImage();
+        }
+    });
 }
 
 function loadImage(level, index) {
-    const imageElement = document.getElementById('lessonImage');
     const imageTitle = document.getElementById('imageTitle');
     const imageNum = document.getElementById('imageNum');
     const imageCount = document.getElementById('imageCount');
@@ -91,30 +98,86 @@ function loadImage(level, index) {
     // Reset zoom and position
     resetZoom();
 
-    // Update image source
-    imageElement.src = `images/class${level}/${index}.png`;
+    // Create new image object
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // Try to load image with CORS
+    img.src = `images/class${level}/${index}.png`;
+    
+    // Update UI
     imageTitle.textContent = `Bài học ${index}`;
     imageNum.textContent = index;
 
-    // Update total images count if not set
-    if (!totalImages) {
-        // We'll use the onload event to check if the image exists
-        imageElement.onload = () => {
-            currentImageIndex = index;
-        };
-        imageElement.onerror = () => {
-            // If image doesn't load, we've reached the end
-            if (index === 1) {
-                imageTitle.textContent = 'Không có bài học';
-                imageElement.src = ''; // Clear image source
-            } else {
-                totalImages = index - 1;
-                imageCount.textContent = totalImages;
-                // Go back to last valid image
-                loadImage(level, totalImages);
-            }
-        };
+    // Handle image load
+    img.onload = () => {
+        currentImage = img;
+        currentImageIndex = index;
+        drawImage();
+    };
+
+    // Handle image error
+    img.onerror = () => {
+        if (index === 1) {
+            imageTitle.textContent = 'Không có bài học';
+            const canvas = document.getElementById('lessonCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else {
+            totalImages = index - 1;
+            imageCount.textContent = totalImages;
+            loadImage(level, totalImages);
+        }
+    };
+}
+
+function drawImage() {
+    if (!currentImage) return;
+
+    const canvas = document.getElementById('lessonCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Calculate dimensions
+    let width = currentImage.width;
+    let height = currentImage.height;
+    const maxWidth = window.innerWidth * 0.8;
+    const maxHeight = window.innerHeight * 0.7;
+
+    // Scale image to fit screen while maintaining aspect ratio
+    if (width > maxWidth) {
+        const ratio = maxWidth / width;
+        width *= ratio;
+        height *= ratio;
     }
+
+    if (height > maxHeight) {
+        const ratio = maxHeight / height;
+        width *= ratio;
+        height *= ratio;
+    }
+
+    // Set canvas dimensions
+    canvas.width = width;
+    canvas.height = height;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Apply transformations
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.scale(currentZoom, currentZoom);
+    ctx.translate(-canvas.width / 2 + translateX / currentZoom, -canvas.height / 2 + translateY / currentZoom);
+
+    // Draw image
+    ctx.drawImage(currentImage, 0, 0, width, height);
+
+    // Add watermark
+    ctx.globalAlpha = 0.1;
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.fillText('Chibi Japanese Learning', width / 2, height / 2);
+
+    ctx.restore();
 }
 
 window.prevImage = () => {
@@ -141,7 +204,8 @@ window.toggleFullscreen = () => {
         container.requestFullscreen().then(() => {
             container.classList.add('fullscreen');
             fullscreenBtn.classList.add('active');
-            resetZoom(); // Reset zoom when entering fullscreen
+            resetZoom();
+            drawImage();
         }).catch(err => {
             alert(`Lỗi khi chuyển sang chế độ toàn màn hình: ${err.message}`);
         });
@@ -149,23 +213,24 @@ window.toggleFullscreen = () => {
         document.exitFullscreen().then(() => {
             container.classList.remove('fullscreen');
             fullscreenBtn.classList.remove('active');
-            resetZoom(); // Reset zoom when exiting fullscreen
+            resetZoom();
+            drawImage();
         });
     }
 };
 
 // Zoom functions
 window.zoomIn = () => {
-    if (currentZoom < 3) { // Max zoom is 3x
+    if (currentZoom < 3) {
         currentZoom += 0.25;
-        updateZoom();
+        drawImage();
     }
 };
 
 window.zoomOut = () => {
-    if (currentZoom > 0.5) { // Min zoom is 0.5x
+    if (currentZoom > 0.5) {
         currentZoom -= 0.25;
-        updateZoom();
+        drawImage();
     }
 };
 
@@ -173,17 +238,12 @@ window.resetZoom = () => {
     currentZoom = 1;
     translateX = 0;
     translateY = 0;
-    updateZoom();
+    drawImage();
 };
-
-function updateZoom() {
-    const image = document.getElementById('lessonImage');
-    image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
-}
 
 // Drag functionality
 function startDrag(e) {
-    if (currentZoom > 1) { // Only allow drag when zoomed in
+    if (currentZoom > 1) {
         isDragging = true;
         if (e.type === 'mousedown') {
             startX = e.clientX - translateX;
@@ -212,15 +272,15 @@ function drag(e) {
     translateY = clientY - startY;
 
     // Limit drag area based on zoom level
-    const image = document.getElementById('lessonImage');
-    const bounds = image.getBoundingClientRect();
+    const canvas = document.getElementById('lessonCanvas');
+    const bounds = canvas.getBoundingClientRect();
     const maxX = (bounds.width * (currentZoom - 1)) / 2;
     const maxY = (bounds.height * (currentZoom - 1)) / 2;
 
     translateX = Math.max(-maxX, Math.min(maxX, translateX));
     translateY = Math.max(-maxY, Math.min(maxY, translateY));
 
-    updateZoom();
+    drawImage();
 }
 
 function endDrag() {

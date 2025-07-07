@@ -38,6 +38,10 @@
             margin-bottom: 2rem;
             text-align: center;
             position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         .image-header {
@@ -78,14 +82,15 @@
             max-width: 100%;
             margin: 0 auto;
             overflow: hidden;
+            background-color: var(--white);
         }
 
-        .lesson-image {
+        #lessonCanvas {
             max-width: 100%;
             height: auto;
             display: block;
             margin: 0 auto;
-            transition: transform 0.3s ease;
+            pointer-events: none;
         }
 
         .image-controls {
@@ -169,7 +174,7 @@
             align-items: center;
         }
 
-        .image-container.fullscreen .lesson-image {
+        .image-container.fullscreen #lessonCanvas {
             max-height: 76vh;
             width: auto;
             object-fit: contain;
@@ -218,6 +223,19 @@
         .zoom-button:hover {
             background-color: var(--primary-dark);
         }
+
+        /* Watermark style */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 5;
+        }
     </style>
 </head>
 <body>
@@ -235,7 +253,8 @@
                 <h2 id="imageTitle" class="image-title">Đang tải...</h2>
             </div>
             <div class="image-wrapper">
-                <img id="lessonImage" class="lesson-image" src="" alt="Bài học" />
+                <canvas id="lessonCanvas"></canvas>
+                <!-- <div class="watermark">Chibi Japanese Learning</div> -->
                 <button class="fullscreen-button" onclick="toggleFullscreen()">
                     <img src="icon/full-screen-30.png" alt="Toàn màn hình" width="24" height="24">
                 </button>
@@ -270,6 +289,19 @@
             .then(data => {
                 document.getElementById('footer-placeholder').innerHTML = data;
             });
+
+        // Prevent context menu
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        // Prevent keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Prevent Ctrl/Cmd + S, Ctrl/Cmd + P
+            if ((e.ctrlKey || e.metaKey) && (e.keyCode === 83 || e.keyCode === 80)) {
+                e.preventDefault();
+            }
+        });
     </script>
 </body>
 </html> 
