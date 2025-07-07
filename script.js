@@ -1,42 +1,20 @@
 import { loadLayout } from './js/utils.js';
 
-// Initialize PDF.js
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
-
 // Hardcoded user accounts
 const users = [
     { username: 'student1', password: 'pass123' },
     { username: 'student2', password: 'pass456' }
 ];
 
-// PDF viewer state
-let pdfDoc = null;
-let pageNum = 1;
-let pageRendering = false;
-let pageNumPending = null;
-let currentPdfIndex = 0;
-
-// Định nghĩa danh sách PDF cho từng lớp
-const classPdfList = {
-    1: [
-        { name: 'Bài 1 - Hiragana', file: 'class1.pdf' }
-    ],
-    2: [
-        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
-    ],
-    3: [
-        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
-    ],
-    4: [
-        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
-    ],
-    5: [
-        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
-    ],
-    6: [
-        { name: 'Bài 1 - Ngữ pháp cơ bản', file: 'class1.pdf' }
-    ]
-};
+// Image viewer state
+let currentImageIndex = 1;
+let totalImages = 0;
+let currentZoom = 1;
+let isDragging = false;
+let startX;
+let startY;
+let translateX = 0;
+let translateY = 0;
 
 // Authentication
 function handleLogin(event) {
@@ -52,11 +30,6 @@ function handleLogin(event) {
     } else {
         alert('Tên đăng nhập hoặc mật khẩu không đúng!');
     }
-}
-
-function logout() {
-    localStorage.removeItem('isLoggedIn');
-    window.location.href = 'login.html';
 }
 
 // Check login status on page load
@@ -76,245 +49,220 @@ window.onload = async function() {
         }
     }
 
-    // Initialize PDF viewer if on class page
+    // Initialize image viewer if on class page
     if (window.location.pathname.includes('class.html')) {
-        initializePdfViewer();
+        initializeImageViewer();
     }
 };
 
-// PDF viewer functions
-function initializePdfViewer() {
-    const canvas = document.getElementById('pdfViewer');
-    const ctx = canvas.getContext('2d');
-
-    // Lấy level từ URL parameter
+// Image viewer functions
+function initializeImageViewer() {
+    // Get level from URL parameter
     const urlParams = new URLSearchParams(window.location.search);
     const level = parseInt(urlParams.get('level')) || 1;
-    const pdfFiles = classPdfList[level] || [];
 
     document.getElementById('classLevel').textContent = level;
     document.getElementById('classDescription').textContent = `Nội dung bài học dành cho lớp ${level}`;
 
-    // Load PDF file
-    const loadPDF = async (pdfInfo) => {
-        try {
-            const loadingTask = pdfjsLib.getDocument(`public/class${level}/${pdfInfo.file}`);
-            pdfDoc = await loadingTask.promise;
-            document.getElementById('pageCount').textContent = pdfDoc.numPages;
-            pageNum = 1;
-            renderPage(pageNum);
-            updatePdfNavigation();
-        } catch (error) {
-            console.error('Error loading PDF:', error);
-            alert('Không thể tải tài liệu PDF. Vui lòng thử lại sau.');
-        }
-    };
+    // Load first image
+    loadImage(level, currentImageIndex);
 
-    // Render PDF page
-    const renderPage = (num) => {
-        pageRendering = true;
-        pdfDoc.getPage(num).then((page) => {
-            let desiredWidth = 297;
-            let desiredHeight = 425;
-            
-            // Kiểm tra nếu đang ở chế độ fullscreen
-            if (document.fullscreenElement) {
-                // Lấy kích thước màn hình
-                const screenHeight = window.innerHeight;
-                const screenWidth = window.innerWidth;
-                
-                // Tính toán scale để fit với chiều cao màn hình và giữ tỷ lệ
-                const viewport = page.getViewport({ scale: 1.0 });
-                const originalRatio = viewport.width / viewport.height;
-                
-                // Ưu tiên chiều cao tối đa
-                desiredHeight = screenHeight;
-                desiredWidth = screenHeight * originalRatio;
-                
-                // Nếu chiều rộng vượt quá màn hình, điều chỉnh lại
-                if (desiredWidth > screenWidth) {
-                    desiredWidth = screenWidth;
-                    desiredHeight = screenWidth / originalRatio;
-                }
+    // Add event listeners for drag functionality
+    const imageElement = document.getElementById('lessonImage');
+    imageElement.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', endDrag);
+    
+    // Touch events for mobile
+    imageElement.addEventListener('touchstart', startDrag);
+    document.addEventListener('touchmove', drag);
+    document.addEventListener('touchend', endDrag);
+
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', handleKeyPress);
+}
+
+function loadImage(level, index) {
+    const imageElement = document.getElementById('lessonImage');
+    const imageTitle = document.getElementById('imageTitle');
+    const imageNum = document.getElementById('imageNum');
+    const imageCount = document.getElementById('imageCount');
+
+    // Reset zoom and position
+    resetZoom();
+
+    // Update image source
+    imageElement.src = `images/class${level}/${index}.png`;
+    imageTitle.textContent = `Bài học ${index}`;
+    imageNum.textContent = index;
+
+    // Update total images count if not set
+    if (!totalImages) {
+        // We'll use the onload event to check if the image exists
+        imageElement.onload = () => {
+            currentImageIndex = index;
+        };
+        imageElement.onerror = () => {
+            // If image doesn't load, we've reached the end
+            if (index === 1) {
+                imageTitle.textContent = 'Không có bài học';
+                imageElement.src = ''; // Clear image source
+            } else {
+                totalImages = index - 1;
+                imageCount.textContent = totalImages;
+                // Go back to last valid image
+                loadImage(level, totalImages);
             }
-            
-            const viewport = page.getViewport({ scale: 1.0 });
-            const scaleX = desiredWidth / viewport.width;
-            const scaleY = desiredHeight / viewport.height;
-            const scale = Math.min(scaleX, scaleY);
-            
-            const scaledViewport = page.getViewport({ scale: scale });
-
-            canvas.height = desiredHeight;
-            canvas.width = desiredWidth;
-
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: scaledViewport
-            };
-
-            const renderTask = page.render(renderContext);
-            renderTask.promise.then(() => {
-                pageRendering = false;
-                if (pageNumPending !== null) {
-                    renderPage(pageNumPending);
-                    pageNumPending = null;
-                }
-            });
-        });
-
-        document.getElementById('pageNum').textContent = num;
-    };
-
-    // Previous page
-    window.prevPage = () => {
-        if (pageNum <= 1) {
-            // Nếu đang ở trang đầu của PDF hiện tại, chuyển sang PDF trước đó
-            if (currentPdfIndex > 0) {
-                currentPdfIndex--;
-                loadPDF(pdfFiles[currentPdfIndex]);
-            }
-            return;
-        }
-        pageNum--;
-        queueRenderPage(pageNum);
-    };
-
-    // Next page
-    window.nextPage = () => {
-        if (pageNum >= pdfDoc.numPages) {
-            // Nếu đang ở trang cuối của PDF hiện tại, chuyển sang PDF tiếp theo
-            if (currentPdfIndex < pdfFiles.length - 1) {
-                currentPdfIndex++;
-                loadPDF(pdfFiles[currentPdfIndex]);
-            }
-            return;
-        }
-        pageNum++;
-        queueRenderPage(pageNum);
-    };
-
-    // Queue rendering of the page
-    const queueRenderPage = (num) => {
-        if (pageRendering) {
-            pageNumPending = num;
-        } else {
-            renderPage(num);
-        }
-    };
-
-    // Toggle fullscreen
-    window.toggleFullscreen = () => {
-        const pdfContainer = document.querySelector('.pdf-container');
-        const pdfheader = document.querySelector('.pdf-header');
-        const fullscreenBtn = document.querySelector('.fullscreen-button');
-
-        if (!document.fullscreenElement) {
-            pdfContainer.requestFullscreen().then(() => {
-                pdfContainer.classList.add('fullscreen');
-                canvas.classList.add('fullscreen-mode');
-                pdfheader.classList.add('d-none');
-                fullscreenBtn.classList.add('active');
-                // Re-render trang hiện tại với kích thước mới
-                renderPage(pageNum);
-            }).catch(err => {
-                alert(`Lỗi khi chuyển sang chế độ toàn màn hình: ${err.message}`);
-            });
-        } else {
-            document.exitFullscreen().then(() => {
-                pdfContainer.classList.remove('fullscreen');
-                canvas.classList.remove('fullscreen-mode');
-                pdfheader.classList.remove('d-none');
-                fullscreenBtn.classList.remove('active');
-                // Re-render trang hiện tại với kích thước mặc định
-                renderPage(pageNum);
-            });
-        }
-    };
-
-    // Thêm event listener cho sự kiện thay đổi kích thước màn hình
-    window.addEventListener('resize', () => {
-        if (document.fullscreenElement) {
-            renderPage(pageNum);
-        }
-    });
-
-    // Cập nhật thông tin điều hướng PDF
-    const updatePdfNavigation = () => {
-        const pdfTitle = document.getElementById('pdfTitle');
-        const prevBtn = document.getElementById('prevPdfBtn');
-        const nextBtn = document.getElementById('nextPdfBtn');
-
-        if (pdfTitle && pdfFiles[currentPdfIndex]) {
-            pdfTitle.textContent = `Tài liệu ${currentPdfIndex + 1}/${pdfFiles.length}: ${pdfFiles[currentPdfIndex].name}`;
-        }
-
-        // Cập nhật trạng thái các nút điều hướng
-        if (prevBtn) {
-            prevBtn.disabled = currentPdfIndex <= 0;
-        }
-        if (nextBtn) {
-            nextBtn.disabled = currentPdfIndex >= pdfFiles.length - 1;
-        }
-    };
-
-    // Chuyển đến tài liệu PDF trước
-    window.prevPdf = () => {
-        if (currentPdfIndex > 0) {
-            currentPdfIndex--;
-            loadPDF(pdfFiles[currentPdfIndex]);
-        }
-    };
-
-    // Chuyển đến tài liệu PDF tiếp theo
-    window.nextPdf = () => {
-        if (currentPdfIndex < pdfFiles.length - 1) {
-            currentPdfIndex++;
-            loadPDF(pdfFiles[currentPdfIndex]);
-        }
-    };
-
-    // Kiểm tra và tải PDF đầu tiên nếu có
-    if (pdfFiles.length > 0) {
-        loadPDF(pdfFiles[0]);
-    } else {
-        document.getElementById('pdfTitle').textContent = 'Không có tài liệu cho lớp này';
+        };
     }
 }
 
-// Prevent keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        return false;
+window.prevImage = () => {
+    if (currentImageIndex > 1) {
+        currentImageIndex--;
+        const level = parseInt(new URLSearchParams(window.location.search).get('level')) || 1;
+        loadImage(level, currentImageIndex);
     }
-});
+};
 
-// Add keyboard shortcuts for navigation and fullscreen
-document.addEventListener('keydown', (e) => {
-    // Prevent Ctrl shortcuts
-    if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        return false;
+window.nextImage = () => {
+    if (!totalImages || currentImageIndex < totalImages) {
+        currentImageIndex++;
+        const level = parseInt(new URLSearchParams(window.location.search).get('level')) || 1;
+        loadImage(level, currentImageIndex);
+    }
+};
+
+window.toggleFullscreen = () => {
+    const container = document.querySelector('.image-container');
+    const fullscreenBtn = document.querySelector('.fullscreen-button');
+
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().then(() => {
+            container.classList.add('fullscreen');
+            fullscreenBtn.classList.add('active');
+            resetZoom(); // Reset zoom when entering fullscreen
+        }).catch(err => {
+            alert(`Lỗi khi chuyển sang chế độ toàn màn hình: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen().then(() => {
+            container.classList.remove('fullscreen');
+            fullscreenBtn.classList.remove('active');
+            resetZoom(); // Reset zoom when exiting fullscreen
+        });
+    }
+};
+
+// Zoom functions
+window.zoomIn = () => {
+    if (currentZoom < 3) { // Max zoom is 3x
+        currentZoom += 0.25;
+        updateZoom();
+    }
+};
+
+window.zoomOut = () => {
+    if (currentZoom > 0.5) { // Min zoom is 0.5x
+        currentZoom -= 0.25;
+        updateZoom();
+    }
+};
+
+window.resetZoom = () => {
+    currentZoom = 1;
+    translateX = 0;
+    translateY = 0;
+    updateZoom();
+};
+
+function updateZoom() {
+    const image = document.getElementById('lessonImage');
+    image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+}
+
+// Drag functionality
+function startDrag(e) {
+    if (currentZoom > 1) { // Only allow drag when zoomed in
+        isDragging = true;
+        if (e.type === 'mousedown') {
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+        } else if (e.type === 'touchstart') {
+            startX = e.touches[0].clientX - translateX;
+            startY = e.touches[0].clientY - translateY;
+        }
+    }
+}
+
+function drag(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+
+    let clientX, clientY;
+    if (e.type === 'mousemove') {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    } else if (e.type === 'touchmove') {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
     }
 
-    const container = document.getElementById('pdfViewerContainer');
-    
-    // Only handle navigation keys when in fullscreen mode
-    if (container && container.classList.contains('fullscreen')) {
+    translateX = clientX - startX;
+    translateY = clientY - startY;
+
+    // Limit drag area based on zoom level
+    const image = document.getElementById('lessonImage');
+    const bounds = image.getBoundingClientRect();
+    const maxX = (bounds.width * (currentZoom - 1)) / 2;
+    const maxY = (bounds.height * (currentZoom - 1)) / 2;
+
+    translateX = Math.max(-maxX, Math.min(maxX, translateX));
+    translateY = Math.max(-maxY, Math.min(maxY, translateY));
+
+    updateZoom();
+}
+
+function endDrag() {
+    isDragging = false;
+}
+
+function handleKeyPress(e) {
+    // Prevent default behavior for arrow keys
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+    }
+
+    // Only handle navigation keys when not in an input field
+    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
         switch(e.key) {
-            case 'Escape':
-                toggleFullscreen();
+            case 'ArrowLeft':
+                prevImage();
                 break;
             case 'ArrowRight':
-                nextPage();
+                nextImage();
                 break;
-            case 'ArrowLeft':
-                prevPage();
+            case 'ArrowUp':
+                zoomIn();
+                break;
+            case 'ArrowDown':
+                zoomOut();
+                break;
+            case 'Escape':
+                if (document.fullscreenElement) {
+                    toggleFullscreen();
+                }
                 break;
         }
     }
-}); 
+}
+
+// Logout function
+function logout() {
+    localStorage.removeItem('isLoggedIn');
+    window.location.href = 'login.html';
+}
+
 // Mobile Menu Toggle
 document.addEventListener('DOMContentLoaded', function() {
     const menuToggle = document.querySelector('.menu-toggle');

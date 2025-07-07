@@ -6,7 +6,6 @@
     <title>Nội dung bài học - Chibi</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
     <style>
         .class-content {
             max-width: 1200px;
@@ -32,33 +31,34 @@
             margin: 0 auto;
         }
 
-        .pdf-container {
+        .image-container {
             background-color: var(--gray-100);
             padding: 2rem;
             border-radius: 8px;
             margin-bottom: 2rem;
             text-align: center;
+            position: relative;
         }
 
-        .pdf-header {
+        .image-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
         }
 
-        .pdf-title {
+        .image-title {
             color: var(--primary-color);
             font-size: 1.5rem;
             margin-bottom: 0.5rem;
         }
 
-        .pdf-navigation {
+        .image-navigation {
             display: flex;
             gap: 1rem;
         }
 
-        .pdf-nav-button {
+        .image-nav-button {
             background-color: var(--primary-color);
             color: var(--white);
             border: none;
@@ -69,21 +69,26 @@
             transition: background-color 0.3s ease;
         }
 
-        .pdf-nav-button:hover {
+        .image-nav-button:hover {
             background-color: var(--primary-dark);
         }
 
-        #pdfViewer {
-            width: 297px;
-            height: 425px;
-            border: none;
-            background-color: var(--white);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        .image-wrapper {
+            position: relative;
+            max-width: 100%;
             margin: 0 auto;
-            display: block;
+            overflow: hidden;
         }
 
-        .pdf-controls {
+        .lesson-image {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            transition: transform 0.3s ease;
+        }
+
+        .image-controls {
             display: flex;
             justify-content: center;
             align-items: center;
@@ -91,7 +96,7 @@
             margin-top: 1rem;
         }
 
-        .pdf-button {
+        .image-button {
             background-color: var(--primary-color);
             color: var(--white);
             border: none;
@@ -102,11 +107,11 @@
             transition: background-color 0.3s ease;
         }
 
-        .pdf-button:hover {
+        .image-button:hover {
             background-color: var(--primary-dark);
         }
 
-        #pageInfo {
+        #imageInfo {
             color: var(--gray-600);
             font-weight: 500;
         }
@@ -121,6 +126,7 @@
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.3s ease;
+            z-index: 10;
         }
 
         .fullscreen-button:hover {
@@ -136,30 +142,18 @@
                 font-size: 1rem;
             }
 
-            .pdf-container {
+            .image-container {
                 padding: 1rem;
             }
 
-            #pdfViewer {
-                height: 600px;
-            }
-
-            .pdf-controls {
+            .image-controls {
                 flex-direction: column;
                 gap: 0.5rem;
             }
         }
 
-        /* Thêm styles cho fullscreen */
-        #pdfViewer.fullscreen-mode {
-            width: auto;
-            height: 86vh;
-            max-height: 86vh;
-            margin: 0;
-            background-color: black;
-        }
-
-        .pdf-container.fullscreen {
+        /* Fullscreen styles */
+        .image-container.fullscreen {
             position: fixed;
             top: 0;
             left: 0;
@@ -175,7 +169,13 @@
             align-items: center;
         }
 
-        .pdf-container.fullscreen .pdf-controls {
+        .image-container.fullscreen .lesson-image {
+            max-height: 90vh;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .image-container.fullscreen .image-controls {
             position: fixed;
             bottom: 20px;
             left: 50%;
@@ -185,7 +185,7 @@
             border-radius: 8px;
         }
 
-        .pdf-container.fullscreen #pageInfo {
+        .image-container.fullscreen #imageInfo {
             color: white;
         }
 
@@ -195,6 +195,28 @@
 
         .fullscreen-button.active img {
             filter: brightness(0) invert(1);
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .zoom-button {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+
+        .zoom-button:hover {
+            background-color: var(--primary-dark);
         }
     </style>
 </head>
@@ -208,30 +230,25 @@
             <p class="class-description" id="classDescription">Nội dung bài học dành cho lớp 1</p>
         </div>
 
-        <div class="pdf-container">
-            <div class="pdf-header">
-                <h2 id="pdfTitle" class="pdf-title">Đang tải tài liệu...</h2>
-                <div class="pdf-navigation">
-                    <button class="pdf-nav-button" onclick="prevPdf()" id="prevPdfBtn" disabled>
-                        <!-- <img src="icon/prev-doc.png" alt="Tài liệu trước" width="24" height="24"> -->
-                        Tài liệu trước
-                    </button>
-                    <button class="pdf-nav-button" onclick="nextPdf()" id="nextPdfBtn" disabled>
-                        Tài liệu tiếp theo
-                        <!-- <img src="icon/next-doc.png" alt="Tài liệu tiếp" width="24" height="24"> -->
-                    </button>
-                </div>
+        <div class="image-container">
+            <div class="image-header">
+                <h2 id="imageTitle" class="image-title">Đang tải...</h2>
             </div>
-            <div style="position: relative;">
-                <canvas id="pdfViewer"></canvas>
+            <div class="image-wrapper">
+                <img id="lessonImage" class="lesson-image" src="" alt="Bài học" />
                 <button class="fullscreen-button" onclick="toggleFullscreen()">
                     <img src="icon/full-screen-30.png" alt="Toàn màn hình" width="24" height="24">
                 </button>
             </div>
-            <div class="pdf-controls">
-                <button class="pdf-button" onclick="prevPage()">Trang trước</button>
-                <span id="pageInfo">Trang: <span id="pageNum">1</span> / <span id="pageCount">1</span></span>
-                <button class="pdf-button" onclick="nextPage()">Trang sau</button>
+            <div class="image-controls">
+                <button class="image-button" onclick="prevImage()">Trang trước</button>
+                <span id="imageInfo">Trang: <span id="imageNum">1</span> / <span id="imageCount">1</span></span>
+                <button class="image-button" onclick="nextImage()">Trang sau</button>
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-button" onclick="zoomIn()">Phóng to</button>
+                <button class="zoom-button" onclick="zoomOut()">Thu nhỏ</button>
+                <button class="zoom-button" onclick="resetZoom()">Khôi phục</button>
             </div>
         </div>
     </main>
