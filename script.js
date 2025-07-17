@@ -17,16 +17,28 @@ let translateX = 0;
 let translateY = 0;
 let currentImage = null;
 
-// Authentication
-function handleLogin(event) {
+// Authentication - Updated for Supabase
+async function handleLogin(event) {
     event.preventDefault();
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
+
+    // Fallback to hardcoded users for backward compatibility
+    const users = [
+        { username: 'student1', password: 'pass123' },
+        { username: 'student2', password: 'pass456' }
+    ];
 
     const user = users.find(u => u.username === username && u.password === password);
 
     if (user) {
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userProfile', JSON.stringify({
+            id: 'local-user',
+            email: username + '@local.com',
+            full_name: username,
+            status: 'approved'
+        }));
         window.location.href = 'index.html';
     } else {
         alert('Tên đăng nhập hoặc mật khẩu không đúng!');

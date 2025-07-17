@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Supabase Config</title>
+</head>
+<body>
+    <h1>Test Supabase Configuration</h1>
+    <div id="status">Đang kiểm tra...</div>
+
+    <!-- Supabase JS -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Test script -->
+    <script type="module">
+        import { supabaseClient, SUPABASE_CONFIG } from './supabase-config.js';
+        
+        console.log('SUPABASE_CONFIG:', SUPABASE_CONFIG);
+        console.log('supabaseClient:', supabaseClient);
+        
+        document.getElementById('status').textContent = 'Supabase config loaded successfully!';
+    </script>
+</body>
+</html> 
