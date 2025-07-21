@@ -196,28 +196,28 @@ window.nextImage = () => {
     }
 };
 
-window.toggleFullscreen = () => {
+    window.toggleFullscreen = () => {
     const container = document.querySelector('.image-container');
-    const fullscreenBtn = document.querySelector('.fullscreen-button');
+        const fullscreenBtn = document.querySelector('.fullscreen-button');
 
-    if (!document.fullscreenElement) {
+        if (!document.fullscreenElement) {
         container.requestFullscreen().then(() => {
             container.classList.add('fullscreen');
-            fullscreenBtn.classList.add('active');
+                fullscreenBtn.classList.add('active');
             resetZoom();
             drawImage();
-        }).catch(err => {
-            alert(`Lỗi khi chuyển sang chế độ toàn màn hình: ${err.message}`);
-        });
-    } else {
-        document.exitFullscreen().then(() => {
+            }).catch(err => {
+                alert(`Lỗi khi chuyển sang chế độ toàn màn hình: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen().then(() => {
             container.classList.remove('fullscreen');
-            fullscreenBtn.classList.remove('active');
+                fullscreenBtn.classList.remove('active');
             resetZoom();
             drawImage();
-        });
-    }
-};
+            });
+        }
+    };
 
 // Zoom functions
 window.zoomIn = () => {
@@ -257,7 +257,7 @@ function startDrag(e) {
 
 function drag(e) {
     if (!isDragging) return;
-    e.preventDefault();
+        e.preventDefault();
 
     let clientX, clientY;
     if (e.type === 'mousemove') {

@@ -1,0 +1,197 @@
+.practice-container {
+    max-width: 1200px;
+    margin: 6rem auto 2rem;
+    padding: 2rem;
+    background: var(--white, #fff);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.practice-header {
+    margin-bottom: 2rem;
+}
+
+.practice-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.lesson-navigation {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #e0e0e0;
+}
+
+.nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nav-btn img {
+    width: 24px;
+    height: 24px;
+}
+
+#lesson-counter {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--primary-color, #1a237e);
+}
+
+#class-title {
+    font-size: 1.5rem;
+    color: var(--primary-color, #1a237e);
+    margin: 0;
+}
+
+#lesson-title {
+    color: var(--primary-color, #1a237e);
+    text-align: center;
+    margin: 1rem 0;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.tool-btn:hover {
+    background: #e0e0e0;
+}
+
+.tool-btn img {
+    width: 20px;
+    height: 20px;
+}
+
+.pen-size {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pen-size input[type="range"] {
+    width: 100px;
+}
+
+.practice-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr; /* Thay đổi tỷ lệ từ 1:1 thành 1:2 */
+    gap: 2rem;
+    margin-top: 2rem;
+    min-height: 500px; /* Đảm bảo chiều cao tối thiểu */
+}
+
+.character-display {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 1rem;
+    max-height: 500px; /* Giới hạn chiều cao tối đa */
+    overflow-y: auto; /* Cho phép cuộn nếu ảnh quá lớn */
+}
+
+.character-display img {
+    max-width: 100%;
+    height: auto;
+    max-height: 400px; /* Giới hạn chiều cao tối đa của ảnh */
+    object-fit: contain; /* Giữ tỷ lệ ảnh */
+}
+
+.lesson-description {
+    margin-top: 1rem;
+    text-align: center;
+    color: #666;
+}
+
+.drawing-area {
+    position: relative;
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 1rem;
+    min-height: 500px; /* Đảm bảo chiều cao tối thiểu */
+}
+
+#drawing-canvas {
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 4px;
+    touch-action: none; /* Prevent scrolling on touch devices */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .practice-container {
+        margin: 4rem 1rem 1rem;
+        padding: 1rem;
+    }
+
+    .practice-navigation {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .practice-content {
+        grid-template-columns: 1fr; /* Chuyển sang layout dọc trên mobile */
+        gap: 1rem;
+    }
+
+    .toolbar {
+        flex-wrap: wrap;
+    }
+
+    .character-display {
+        min-height: 200px;
+        max-height: 300px; /* Giảm chiều cao tối đa trên mobile */
+    }
+
+    .character-display img {
+        max-height: 200px; /* Giảm chiều cao tối đa của ảnh trên mobile */
+    }
+
+    .drawing-area {
+        min-height: 400px; /* Tăng chiều cao tối thiểu trên mobile */
+    }
+} 

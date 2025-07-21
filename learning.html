@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Học từ vựng - Chibi</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Include header -->
+    <div id="header-placeholder"></div>
+
+    <main  class="main-content">
+        <div class="class-grid">
+            <a href="class.html?level=1" class="class-card">
+                <h2>Lớp 1</h2>
+                <p>Nền tảng cơ bản cho người mới bắt đầu</p>
+            </a>
+            <a href="class.html?level=2" class="class-card">
+                <h2>Lớp 2</h2>
+                <p>Phát triển kỹ năng giao tiếp</p>
+            </a>
+            <a href="class.html?level=3" class="class-card">
+                <h2>Lớp 3</h2>
+                <p>Nâng cao từ vựng và ngữ pháp</p>
+            </a>
+            <a href="class.html?level=4" class="class-card">
+                <h2>Lớp 4</h2>
+                <p>Luyện tập hội thoại nâng cao</p>
+            </a>
+            <a href="class.html?level=5" class="class-card">
+                <h2>Lớp 5</h2>
+                <p>Kỹ năng đọc hiểu và viết</p>
+            </a>
+            <a href="class.html?level=6" class="class-card">
+                <h2>Lớp 6</h2>
+                <p>Tiếng Nhật thương mại</p>
+            </a>
+        </div>
+    </main>
+
+    <!-- Include footer -->
+    <div id="footer-placeholder"></div>
+
+    <script type="module" src="script.js"></script>
+    <script>
+        // Load header và footer
+        fetch('components/header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header-placeholder').innerHTML = data;
+            });
+
+        fetch('components/footer.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('footer-placeholder').innerHTML = data;
+            });
+    </script>
+</body>
+</html> 
