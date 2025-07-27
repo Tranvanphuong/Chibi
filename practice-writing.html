@@ -16,28 +16,105 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
 
-        .canvas-container {
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .mode-selector button {
+            padding: 8px 16px;
+            border: 2px solid var(--primary-color, #1a237e);
+            border-radius: 4px;
+            background-color: white;
+            color: var(--primary-color, #1a237e);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .mode-selector button.active {
+            background-color: var(--primary-color, #1a237e);
+            color: white;
+        }
+
+        /* Layout cho chế độ 1 */
+        .mode-1 .canvas-container {
             position: relative;
             width: 100%;
             margin: 20px 0;
-            touch-action: none; /* Ngăn scroll mặc định trên mobile */
+            touch-action: none;
         }
 
-        #backgroundImage {
+        .mode-1 #backgroundImage {
             width: 100%;
             height: auto;
             opacity: 0.3;
-            display: block; /* Đảm bảo không có khoảng trống dưới ảnh */
+            display: block;
         }
 
-        #writingCanvas {
+        .mode-1 #writingCanvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             cursor: crosshair;
-            touch-action: none; /* Ngăn scroll mặc định trên mobile */
+            touch-action: none;
+        }
+
+        /* Layout cho chế độ 2 */
+        .mode-2 .practice-layout {
+            display: grid;
+            gap: 1rem;
+            margin: 20px 0;
+        }
+
+        @media (min-width: 768px) {
+            .mode-2 .practice-layout {
+                grid-template-columns: 300px 1fr;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .mode-2 .practice-layout {
+                grid-template-rows: auto 1fr;
+            }
+        }
+
+        .mode-2 .sample-character {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .mode-2 .sample-character img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+        }
+
+        .mode-2 .canvas-container {
+            position: relative;
+            width: 100%;
+            touch-action: none;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .mode-2 #writingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            touch-action: none;
+            background: white;
+            border-radius: 4px;
         }
 
         .controls {
@@ -98,6 +175,11 @@
         <div class="writing-practice-container">
             <h1 style="text-align: center; color: var(--primary-color,#1a237e); margin-bottom: 1.5rem;">Luyện viết chữ</h1>
             
+            <div class="mode-selector">
+                <button id="mode1Btn" class="active">Chế độ 1: Viết chồng</button>
+                <button id="mode2Btn">Chế độ 2: Viết theo mẫu</button>
+            </div>
+
             <div class="controls">
                 <button id="clearBtn">Xóa tất cả</button>
                 <button id="undoBtn">Hoàn tác</button>
@@ -108,9 +190,24 @@
                 <input type="color" id="colorPicker" value="#000000">
             </div>
 
-            <div class="canvas-container">
-                <img id="backgroundImage" src="" alt="Chữ mẫu">
-                <canvas id="writingCanvas"></canvas>
+            <!-- Container cho chế độ 1 -->
+            <div id="mode1Container" class="mode-1">
+                <div class="canvas-container">
+                    <img id="backgroundImage" src="" alt="Chữ mẫu">
+                    <canvas id="writingCanvas"></canvas>
+                </div>
+            </div>
+
+            <!-- Container cho chế độ 2 -->
+            <div id="mode2Container" class="mode-2" style="display: none;">
+                <div class="practice-layout">
+                    <div class="sample-character">
+                        <img id="sampleImage" src="" alt="Chữ mẫu">
+                    </div>
+                    <div class="canvas-container">
+                        <canvas id="writingCanvas2"></canvas>
+                    </div>
+                </div>
             </div>
 
             <div class="controls navigation">
@@ -144,15 +241,52 @@
         const classLevel = urlParams.get('class');
         
         // Khởi tạo canvas
-        const canvas = document.getElementById('writingCanvas');
-        const ctx = canvas.getContext('2d');
+        const canvas1 = document.getElementById('writingCanvas');
+        const canvas2 = document.getElementById('writingCanvas2');
+        const ctx1 = canvas1.getContext('2d');
+        const ctx2 = canvas2.getContext('2d');
         const backgroundImage = document.getElementById('backgroundImage');
-        const container = document.querySelector('.canvas-container');
+        const sampleImage = document.getElementById('sampleImage');
+        const container1 = document.querySelector('.mode-1 .canvas-container');
+        const container2 = document.querySelector('.mode-2 .canvas-container');
         const currentCharDisplay = document.getElementById('currentCharDisplay');
 
         // Biến để theo dõi chữ hiện tại
         let currentCharIndex = 0;
         let totalImages = 26; // Số lượng ảnh mặc định, sẽ được cập nhật sau
+        let currentMode = 1; // Chế độ mặc định
+        let currentCanvas = canvas1;
+        let currentCtx = ctx1;
+
+        // Xử lý chuyển đổi chế độ
+        const mode1Btn = document.getElementById('mode1Btn');
+        const mode2Btn = document.getElementById('mode2Btn');
+        const mode1Container = document.getElementById('mode1Container');
+        const mode2Container = document.getElementById('mode2Container');
+
+        mode1Btn.addEventListener('click', () => switchMode(1));
+        mode2Btn.addEventListener('click', () => switchMode(2));
+
+        function switchMode(mode) {
+            currentMode = mode;
+            if (mode === 1) {
+                mode1Container.style.display = 'block';
+                mode2Container.style.display = 'none';
+                mode1Btn.classList.add('active');
+                mode2Btn.classList.remove('active');
+                currentCanvas = canvas1;
+                currentCtx = ctx1;
+            } else {
+                mode1Container.style.display = 'none';
+                mode2Container.style.display = 'block';
+                mode1Btn.classList.remove('active');
+                mode2Btn.classList.add('active');
+                currentCanvas = canvas2;
+                currentCtx = ctx2;
+            }
+            resizeCanvas();
+            loadCharacter(currentCharIndex);
+        }
 
         // Hàm để load danh sách ảnh
         async function loadCharacterList() {
@@ -176,16 +310,23 @@
         function loadCharacter(index) {
             if (index >= 0) {
                 currentCharIndex = index;
-                const imageNumber = index + 1; // Chuyển index thành số thứ tự ảnh (1-based)
-                backgroundImage.src = `images/writing/${classLevel}/${imageNumber}.png`;
-                currentCharDisplay.textContent = imageNumber; // Hiển thị số thứ tự thay vì chữ
+                const imageNumber = index + 1;
+                const imagePath = `images/writing/${classLevel}/${imageNumber}.png`;
+                
+                if (currentMode === 1) {
+                    backgroundImage.src = imagePath;
+                } else {
+                    sampleImage.src = imagePath;
+                }
+                
+                currentCharDisplay.textContent = imageNumber;
                 
                 // Cập nhật trạng thái nút
                 document.getElementById('prevBtn').disabled = currentCharIndex === 0;
                 document.getElementById('nextBtn').disabled = currentCharIndex === totalImages - 1;
                 
                 // Xóa canvas để bắt đầu viết chữ mới
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                currentCtx.clearRect(0, 0, currentCanvas.width, currentCanvas.height);
                 drawingHistory = [];
             }
         }
@@ -198,22 +339,26 @@
 
         // Thiết lập kích thước canvas
         function resizeCanvas() {
-            const rect = container.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.width * 0.75; // Tỷ lệ 4:3
-            
-            // Đặt kích thước thực tế cho canvas
-            canvas.style.width = `${rect.width}px`;
-            canvas.style.height = `${canvas.height}px`;
-            
-            // Đặt kích thước cho ảnh nền
-            backgroundImage.style.width = `${rect.width}px`;
-            backgroundImage.style.height = `${canvas.height}px`;
+            if (currentMode === 1) {
+                const rect = container1.getBoundingClientRect();
+                canvas1.width = rect.width;
+                canvas1.height = rect.width * 0.75;
+                canvas1.style.width = `${rect.width}px`;
+                canvas1.style.height = `${canvas1.height}px`;
+                backgroundImage.style.width = `${rect.width}px`;
+                backgroundImage.style.height = `${canvas1.height}px`;
+            } else {
+                const rect = container2.getBoundingClientRect();
+                canvas2.width = rect.width;
+                canvas2.height = rect.height;
+                canvas2.style.width = '100%';
+                canvas2.style.height = '100%';
+            }
 
             // Thiết lập lại context sau khi resize
-            ctx.strokeStyle = document.getElementById('colorPicker').value;
-            ctx.lineWidth = document.getElementById('strokeWidth').value;
-            ctx.lineCap = 'round';
+            currentCtx.strokeStyle = document.getElementById('colorPicker').value;
+            currentCtx.lineWidth = document.getElementById('strokeWidth').value;
+            currentCtx.lineCap = 'round';
 
             // Vẽ lại các nét vẽ sau khi resize
             redrawCanvas();
@@ -222,12 +367,12 @@
         // Xử lý sự kiện vẽ
         function startDrawing(e) {
             isDrawing = true;
-            const rect = canvas.getBoundingClientRect();
+            const rect = currentCanvas.getBoundingClientRect();
             if (e.type === 'mousedown') {
                 lastX = e.clientX - rect.left;
                 lastY = e.clientY - rect.top;
             } else if (e.type === 'touchstart') {
-                e.preventDefault(); // Ngăn scroll
+                e.preventDefault();
                 lastX = e.touches[0].clientX - rect.left;
                 lastY = e.touches[0].clientY - rect.top;
             }
@@ -237,7 +382,7 @@
             if (!isDrawing) return;
             e.preventDefault();
 
-            const rect = canvas.getBoundingClientRect();
+            const rect = currentCanvas.getBoundingClientRect();
             let x, y;
 
             if (e.type === 'mousemove') {
@@ -249,16 +394,16 @@
             }
 
             // Đảm bảo tọa độ nằm trong canvas
-            x = Math.max(0, Math.min(x, canvas.width));
-            y = Math.max(0, Math.min(y, canvas.height));
+            x = Math.max(0, Math.min(x, currentCanvas.width));
+            y = Math.max(0, Math.min(y, currentCanvas.height));
 
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(x, y);
-            ctx.strokeStyle = document.getElementById('colorPicker').value;
-            ctx.lineWidth = document.getElementById('strokeWidth').value;
-            ctx.lineCap = 'round';
-            ctx.stroke();
+            currentCtx.beginPath();
+            currentCtx.moveTo(lastX, lastY);
+            currentCtx.lineTo(x, y);
+            currentCtx.strokeStyle = document.getElementById('colorPicker').value;
+            currentCtx.lineWidth = document.getElementById('strokeWidth').value;
+            currentCtx.lineCap = 'round';
+            currentCtx.stroke();
 
             [lastX, lastY] = [x, y];
         }
@@ -266,19 +411,19 @@
         function stopDrawing(e) {
             if (isDrawing) {
                 isDrawing = false;
-                drawingHistory.push(canvas.toDataURL());
+                drawingHistory.push(currentCanvas.toDataURL());
             }
         }
 
         // Xử lý nút điều khiển
         document.getElementById('clearBtn').addEventListener('click', () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            currentCtx.clearRect(0, 0, currentCanvas.width, currentCanvas.height);
             drawingHistory = [];
         });
 
         document.getElementById('undoBtn').addEventListener('click', () => {
             if (drawingHistory.length > 0) {
-                drawingHistory.pop(); // Xóa trạng thái cuối
+                drawingHistory.pop();
                 redrawCanvas();
             }
         });
@@ -293,32 +438,48 @@
         });
 
         function redrawCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            currentCtx.clearRect(0, 0, currentCanvas.width, currentCanvas.height);
             if (drawingHistory.length > 0) {
                 const img = new Image();
                 img.src = drawingHistory[drawingHistory.length - 1];
                 img.onload = () => {
-                    ctx.drawImage(img, 0, 0);
+                    currentCtx.drawImage(img, 0, 0);
                 };
             }
         }
 
         // Thiết lập các event listener
         function setupEventListeners() {
-            // Mouse events
-            canvas.addEventListener('mousedown', startDrawing);
-            canvas.addEventListener('mousemove', draw);
-            canvas.addEventListener('mouseup', stopDrawing);
-            canvas.addEventListener('mouseout', stopDrawing);
+            // Mouse events cho canvas 1
+            canvas1.addEventListener('mousedown', startDrawing);
+            canvas1.addEventListener('mousemove', draw);
+            canvas1.addEventListener('mouseup', stopDrawing);
+            canvas1.addEventListener('mouseout', stopDrawing);
 
-            // Touch events
-            canvas.addEventListener('touchstart', startDrawing, { passive: false });
-            canvas.addEventListener('touchmove', draw, { passive: false });
-            canvas.addEventListener('touchend', stopDrawing);
-            canvas.addEventListener('touchcancel', stopDrawing);
+            // Touch events cho canvas 1
+            canvas1.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas1.addEventListener('touchmove', draw, { passive: false });
+            canvas1.addEventListener('touchend', stopDrawing);
+            canvas1.addEventListener('touchcancel', stopDrawing);
+
+            // Mouse events cho canvas 2
+            canvas2.addEventListener('mousedown', startDrawing);
+            canvas2.addEventListener('mousemove', draw);
+            canvas2.addEventListener('mouseup', stopDrawing);
+            canvas2.addEventListener('mouseout', stopDrawing);
+
+            // Touch events cho canvas 2
+            canvas2.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas2.addEventListener('touchmove', draw, { passive: false });
+            canvas2.addEventListener('touchend', stopDrawing);
+            canvas2.addEventListener('touchcancel', stopDrawing);
 
             // Ngăn scroll khi vẽ trên mobile
-            canvas.addEventListener('touchstart', function(e) {
+            canvas1.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+            }, { passive: false });
+
+            canvas2.addEventListener('touchstart', function(e) {
                 e.preventDefault();
             }, { passive: false });
         }
@@ -333,7 +494,6 @@
         // Resize canvas khi thay đổi kích thước màn hình
         let resizeTimeout;
         window.addEventListener('resize', () => {
-            // Debounce resize event
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(resizeCanvas, 250);
         });
