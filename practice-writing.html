@@ -3,55 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tập viết - Chibi</title>
+    <title>Luyện viết chữ - Chibi</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="css/practice.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .writing-practice-container {
+            max-width: 800px;
+            margin: 6rem auto 2rem;
+            padding: 2rem;
+            background: var(--white, #fff);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            margin: 20px 0;
+            touch-action: none; /* Ngăn scroll mặc định trên mobile */
+        }
+
+        #backgroundImage {
+            width: 100%;
+            height: auto;
+            opacity: 0.3;
+            display: block; /* Đảm bảo không có khoảng trống dưới ảnh */
+        }
+
+        #writingCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            touch-action: none; /* Ngăn scroll mặc định trên mobile */
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .controls button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--primary-color, #1a237e);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .controls button:hover {
+            background-color: var(--primary-dark, #0e1642);
+        }
+
+        #colorPicker {
+            padding: 0;
+            width: 40px;
+            height: 40px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .stroke-width {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .navigation {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .current-char {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+    </style>
 </head>
 <body>
     <!-- Include header -->
     <div id="header-placeholder"></div>
 
     <main>
-        <div class="practice-container">
-            <div class="practice-header">
-                <div class="practice-navigation">
-                    <h2 id="class-title">Lớp 1</h2>
-                    <div class="lesson-navigation">
-                        <button id="prev-btn" class="nav-btn" disabled>
-                            <img src="icon/arrow-left.svg" alt="Trước">
-                        </button>
-                        <span id="lesson-counter">1/10</span>
-                        <button id="next-btn" class="nav-btn">
-                            <img src="icon/arrow-right.svg" alt="Sau">
-                        </button>
-                    </div>
-                </div>
-                <!-- <h1 id="lesson-title">Tập viết chữ A</h1> -->
-                <div class="toolbar">
-                    <button id="clear-btn" class="tool-btn">
-                        <img src="icon/eraser.svg" alt="Xóa">
-                        Xóa tất cả
-                    </button>
-                    <button id="undo-btn" class="tool-btn">
-                        <img src="icon/undo.svg" alt="Hoàn tác">
-                        Hoàn tác
-                    </button>
-                    <div class="pen-size">
-                        <label for="pen-width">Độ dày bút:</label>
-                        <input type="range" id="pen-width" min="1" max="10" value="2">
-                    </div>
-                </div>
-            </div>
+        <div class="writing-practice-container">
+            <h1 style="text-align: center; color: var(--primary-color,#1a237e); margin-bottom: 1.5rem;">Luyện viết chữ</h1>
             
-            <div class="practice-content">
-                <div class="character-display">
-                    <img id="character-image" src="">
-                    <p id="lesson-description" class="lesson-description"></p>
+            <div class="controls">
+                <button id="clearBtn">Xóa tất cả</button>
+                <button id="undoBtn">Hoàn tác</button>
+                <div class="stroke-width">
+                    <label for="strokeWidth">Độ dày:</label>
+                    <input type="range" id="strokeWidth" min="1" max="10" value="2">
                 </div>
-                <div class="drawing-area">
-                    <canvas id="drawing-canvas"></canvas>
-                </div>
+                <input type="color" id="colorPicker" value="#000000">
+            </div>
+
+            <div class="canvas-container">
+                <img id="backgroundImage" src="" alt="Chữ mẫu">
+                <canvas id="writingCanvas"></canvas>
+            </div>
+
+            <div class="controls navigation">
+                <button id="prevBtn">← Trước</button>
+                <span class="current-char">Chữ: <span id="currentCharDisplay">A</span></span>
+                <button id="nextBtn">Sau →</button>
             </div>
         </div>
     </main>
@@ -60,7 +125,6 @@
     <div id="footer-placeholder"></div>
 
     <script type="module" src="script.js"></script>
-    <script type="module" src="js/drawing.js"></script>
     <script>
         // Load header và footer
         fetch('components/header.html')
@@ -74,6 +138,205 @@
             .then(data => {
                 document.getElementById('footer-placeholder').innerHTML = data;
             });
+
+        // Lấy tham số lớp học từ URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const classLevel = urlParams.get('class');
+        
+        // Khởi tạo canvas
+        const canvas = document.getElementById('writingCanvas');
+        const ctx = canvas.getContext('2d');
+        const backgroundImage = document.getElementById('backgroundImage');
+        const container = document.querySelector('.canvas-container');
+        const currentCharDisplay = document.getElementById('currentCharDisplay');
+
+        // Biến để theo dõi chữ hiện tại
+        let currentCharIndex = 0;
+        let totalImages = 26; // Số lượng ảnh mặc định, sẽ được cập nhật sau
+
+        // Hàm để load danh sách ảnh
+        async function loadCharacterList() {
+            try {
+                // Thử load ảnh đầu tiên để kiểm tra
+                const img = new Image();
+                img.src = `images/writing/${classLevel}/1.png`;
+                img.onload = () => {
+                    // Nếu load được ảnh đầu tiên, tiến hành load ảnh đó
+                    loadCharacter(0);
+                };
+                img.onerror = () => {
+                    console.error('Không thể tải ảnh');
+                };
+            } catch (error) {
+                console.error('Lỗi khi tải ảnh:', error);
+            }
+        }
+
+        // Hàm để load một ảnh cụ thể
+        function loadCharacter(index) {
+            if (index >= 0) {
+                currentCharIndex = index;
+                const imageNumber = index + 1; // Chuyển index thành số thứ tự ảnh (1-based)
+                backgroundImage.src = `images/writing/${classLevel}/${imageNumber}.png`;
+                currentCharDisplay.textContent = imageNumber; // Hiển thị số thứ tự thay vì chữ
+                
+                // Cập nhật trạng thái nút
+                document.getElementById('prevBtn').disabled = currentCharIndex === 0;
+                document.getElementById('nextBtn').disabled = currentCharIndex === totalImages - 1;
+                
+                // Xóa canvas để bắt đầu viết chữ mới
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawingHistory = [];
+            }
+        }
+
+        // Mảng lưu các nét vẽ để hoàn tác
+        let drawingHistory = [];
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Thiết lập kích thước canvas
+        function resizeCanvas() {
+            const rect = container.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.width * 0.75; // Tỷ lệ 4:3
+            
+            // Đặt kích thước thực tế cho canvas
+            canvas.style.width = `${rect.width}px`;
+            canvas.style.height = `${canvas.height}px`;
+            
+            // Đặt kích thước cho ảnh nền
+            backgroundImage.style.width = `${rect.width}px`;
+            backgroundImage.style.height = `${canvas.height}px`;
+
+            // Thiết lập lại context sau khi resize
+            ctx.strokeStyle = document.getElementById('colorPicker').value;
+            ctx.lineWidth = document.getElementById('strokeWidth').value;
+            ctx.lineCap = 'round';
+
+            // Vẽ lại các nét vẽ sau khi resize
+            redrawCanvas();
+        }
+
+        // Xử lý sự kiện vẽ
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            if (e.type === 'mousedown') {
+                lastX = e.clientX - rect.left;
+                lastY = e.clientY - rect.top;
+            } else if (e.type === 'touchstart') {
+                e.preventDefault(); // Ngăn scroll
+                lastX = e.touches[0].clientX - rect.left;
+                lastY = e.touches[0].clientY - rect.top;
+            }
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            let x, y;
+
+            if (e.type === 'mousemove') {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            } else if (e.type === 'touchmove') {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            }
+
+            // Đảm bảo tọa độ nằm trong canvas
+            x = Math.max(0, Math.min(x, canvas.width));
+            y = Math.max(0, Math.min(y, canvas.height));
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = document.getElementById('colorPicker').value;
+            ctx.lineWidth = document.getElementById('strokeWidth').value;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            [lastX, lastY] = [x, y];
+        }
+
+        function stopDrawing(e) {
+            if (isDrawing) {
+                isDrawing = false;
+                drawingHistory.push(canvas.toDataURL());
+            }
+        }
+
+        // Xử lý nút điều khiển
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawingHistory = [];
+        });
+
+        document.getElementById('undoBtn').addEventListener('click', () => {
+            if (drawingHistory.length > 0) {
+                drawingHistory.pop(); // Xóa trạng thái cuối
+                redrawCanvas();
+            }
+        });
+
+        // Xử lý nút chuyển chữ
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            loadCharacter(currentCharIndex - 1);
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            loadCharacter(currentCharIndex + 1);
+        });
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (drawingHistory.length > 0) {
+                const img = new Image();
+                img.src = drawingHistory[drawingHistory.length - 1];
+                img.onload = () => {
+                    ctx.drawImage(img, 0, 0);
+                };
+            }
+        }
+
+        // Thiết lập các event listener
+        function setupEventListeners() {
+            // Mouse events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            // Touch events
+            canvas.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', stopDrawing);
+            canvas.addEventListener('touchcancel', stopDrawing);
+
+            // Ngăn scroll khi vẽ trên mobile
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+            }, { passive: false });
+        }
+
+        // Khởi tạo canvas khi trang load
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            loadCharacterList();
+            setupEventListeners();
+        });
+
+        // Resize canvas khi thay đổi kích thước màn hình
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            // Debounce resize event
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(resizeCanvas, 250);
+        });
     </script>
 </body>
 </html> 
