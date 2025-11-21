@@ -94,6 +94,8 @@ function loadImage(level, index) {
     const imageTitle = document.getElementById('imageTitle');
     const imageNum = document.getElementById('imageNum');
     const imageCount = document.getElementById('imageCount');
+    document.getElementById('classLevel').textContent = level;
+    document.getElementById('classDescription').textContent = `Nội dung bài học dành cho lớp ${level}`;
 
     // Reset zoom and position
     resetZoom();
